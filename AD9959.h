@@ -52,33 +52,37 @@ public:
     ChannelAll	= 0xF0,
   } ChannelNum;
 
-  typedef enum {
-    CSR               = 0x00,
-    FR1               = 0x01,
-    FR2               = 0x02,
-    CFR               = 0x03,
-    CTW0              = 0x04,
-    CPW0              = 0x05,
-    ACR               = 0x06,
-    LSR               = 0x07,
-    RDW               = 0x08,
-    FDW               = 0x09,
-    CTW1              = 0x0A,
-    CTW2              = 0x0B,
-    CTW3              = 0x0C,
-    CTW4              = 0x0D,
-    CTW5              = 0x0E,
-    CTW6              = 0x0F,
-    CTW7              = 0x10,
-    CTW8              = 0x11,
-    CTW9              = 0x12,
-    CTW10             = 0x13,
-    CTW11             = 0x14,
-    CTW12             = 0x15,
-    CTW13             = 0x16,
-    CTW14             = 0x17,
-    CTW15             = 0x18,
-    READ              = 0x80
+  typedef enum {	// There are 334 bytes in all the registers! See why below...
+    CSR               = 0x00,	// 1 byte, Channel Select Register
+    FR1               = 0x01,	// 3 bytes, Function Register 1
+    FR2               = 0x02,	// 2 bytes, Function Register 2
+    				// The following registers are duplicated for each channel.
+				// A write goes to any and all registers based on channel select (CSR)
+    CFR               = 0x03,	// 3 bytes, Channel Function Register (one for each channel!)
+    CFTW              = 0x04,	// 4 bytes, Channel Frequency Tuning Word
+    CPOW              = 0x05,	// 2 bytes, Channel Phase Offset Word (aligned to LSB, top 2 bits unused)
+    ACR               = 0x06,	// 3 bytes, Amplitude Control Register (rate byte, control byte, scale byte)
+    LSRR              = 0x07,	// 2 bytes, Linear Sweep Rate Register (falling, rising)
+    RDW               = 0x08,	// 4 bytes, Rising Delta Word
+    FDW               = 0x09,	// 4 bytes, Falling Delta Word
+    				// The following registers (per channel) are used to provide 16 modulation values
+				// This library doesn't provide modulation. Only CW1 is used, for sweep destination.
+    CW1               = 0x0A,	// 4 bytes, Channel Word 1-15 (phase & amplitude MSB aligned)
+    CW2               = 0x0B,
+    CW3               = 0x0C,
+    CW4               = 0x0D,
+    CW5               = 0x0E,
+    CW6               = 0x0F,
+    CW7               = 0x10,
+    CW8               = 0x11,
+    CW9               = 0x12,
+    CW10              = 0x13,
+    CW11              = 0x14,
+    CW12              = 0x15,
+    CW13              = 0x16,
+    CW14              = 0x17,
+    CW15              = 0x18,
+    READ              = 0x80	// Pseudo-register to indicate read
   } Register;
 
   typedef struct {
@@ -128,6 +132,18 @@ public:
     static constexpr  uint32_t ExtFullPwrDown	= 0x40;	// External power-down means full power-down (DAC&PLL)
     static constexpr  uint32_t RefClkInPwrDown	= 0x80;	// Disable reference clock input
   } FR1_Bits;
+
+  typedef struct {
+    static constexpr  uint32_t AllChanAutoClearSweep	= 0x8000;// Clear sweep accumulator(s) on I/O_UPDATE
+    static constexpr  uint32_t AllChanClearSweep	= 0x4000;// Clear sweep accumulator(s) immediately
+    static constexpr  uint32_t AllChanAutoClearPhase	= 0x2000;// Clear phase accumulator(s) on I/O_UPDATE
+    static constexpr  uint32_t AllChanClearPhase	= 0x2000;// Clear phase accumulator(s) immediately
+    static constexpr  uint32_t AutoSyncEnable	= 0x0080;
+    static constexpr  uint32_t MasterSyncEnable	= 0x0040;
+    static constexpr  uint32_t MasterSyncStatus	= 0x0020;
+    static constexpr  uint32_t MasterSyncMask	= 0x0010;
+    static constexpr  uint32_t SystemClockOffset = 0x0003;	// Mask for 2-bit clock offset controls
+  } FR2_Bits;
 
   AD9959()
   {
