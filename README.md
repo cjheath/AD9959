@@ -103,6 +103,7 @@ After setting up one or more channels' sweep parameters, start the sweep by
 toggling the configured profile pin(s). If you toggle the pins together, or
 wire two profile pins to the same output, they'll start in sync.
 
+<!---
 You can read out the sweep accumulator register at any time during a sweep.
 Combined with the frequencyDivider() function and the ability to change
 sweep parameters on-the-fly, you can do some pretty tricky things like
@@ -110,3 +111,4 @@ near-log sweeps instead of linear. Or just track the sweep progress (but
 the SPI communication might increase noise levels).
 
     acc = dds.sweepProgress(MyAD9959::Channel0|MyAD9959::Channel1);	// Read the sweep accumulator value
+--->
