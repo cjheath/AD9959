@@ -166,6 +166,22 @@ public:
     spi_end();
   }
 
+#if 0
+  void setFrequency(ChannelNum chan, unsigned long freq)
+  {
+    unsigned long tuning_word = freq * 10000000ULL / calibration * 4294967296ULL / 180000000ULL;
+
+    SPI.beginTransaction(SPISettings(SPIRate, LSBFIRST, SPI_MODE0));
+    for (int b = 0; b < 4; b++, tuning_word >>= 8)
+	    SPI.transfer(tuning_word&0xFF); 
+    // The last byte contains configuration settings including phase:
+    SPI.transfer(0x01);
+
+    pulse(FQ_UDPin);		// Transfer the 40-bit control word into the DDS core
+    SPI.endTransaction();
+  }
+#endif
+
 protected:
   void pulse(uint8_t pin)
   {
