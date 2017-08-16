@@ -145,6 +145,25 @@ public:
     static constexpr  uint32_t SystemClockOffset = 0x0003;	// Mask for 2-bit clock offset controls
   } FR2_Bits;
 
+  typedef struct {
+    static constexpr  uint32_t ModulationMode	= 0xC00000;	// Mask for modulation mode
+    static constexpr  uint32_t AmplitudeModulation= 0x400000;	// Mask for modulation mode
+    static constexpr  uint32_t FrequencyModulation= 0x800000;	// Mask for modulation mode
+    static constexpr  uint32_t PhaseModulation	= 0xC00000;	// Mask for modulation mode
+    static constexpr  uint32_t SweepNoDwell	= 0x008000;	// No dwell mode
+    static constexpr  uint32_t SweepEnable	= 0x004000;	// Enable the sweep
+    static constexpr  uint32_t SweepStepTimerExt = 0x002000;	// Reset the sweep step timer on I/O_UPDATE
+    static constexpr  uint32_t DACFullScale	= 0x000300;	// 1/8, 1/4, 1/2 or full DAC current
+    static constexpr  uint32_t DigitalPowerDown	= 0x000080;	// Power down the DDS core
+    static constexpr  uint32_t DACPowerDown	= 0x000040;	// Power down the DAC
+    static constexpr  uint32_t MatchPipeDelay	= 0x000020;	// 
+    static constexpr  uint32_t AutoclearSweep	= 0x000010;	// Clear the sweep accumulator on I/O_UPDATE
+    static constexpr  uint32_t ClearSweep	= 0x000008;	// Clear the sweep accumulator immediately
+    static constexpr  uint32_t AutoclearPhase	= 0x000004;	// Clear the phase accumulator on I/O_UPDATE
+    static constexpr  uint32_t ClearPhase	= 0x000002;	// Clear the phase accumulator immediately
+    static constexpr  uint32_t OutputSineWave	= 0x000001;	// default is cosine
+  } CFR_Bits;
+
   AD9959()
   {
     // Ensure that the SPI device is initialised
@@ -180,6 +199,60 @@ public:
     SPI.transfer(FR1_Bits::ModLevels2 | FR1_Bits::RampUpDownOff | FR1_Bits::Profile0);
     SPI.transfer(FR1_Bits::SyncClkDisable); // Don't output SYNC_CLK
     spi_end();
+  }
+
+  uint32_t frequencyDivider(uint32_t freq) const
+  {
+    return (uint32_t)(freq * 10000000ULL / calibration * 4294967296ULL / 500000000ULL);
+  }
+
+  void setFrequency(ChannelNum chan, uint32_t freq)
+  {
+    write4(CFTW, frequencyDivider(freq));
+  }
+
+  void setAmplitude(ChannelNum chan, uint16_t amplitude)		// Maximum amplitude value is 1023
+  {
+    // 3 bytes, Amplitude Control Register (rate byte, control byte, scale byte)
+    // write2(ACR, amplitude);
+    // REVISIT: Not yet implemented
+  }
+
+  void setPhase(ChannelNum chan, uint16_t phase)			// Maximum phase value is 16383
+  {
+    write2(CPOW, phase);
+  }
+
+  void update()
+  {
+    pulse(UpdatePin);
+  }
+
+  void sweepFrequency(ChannelNum chan, uint32_t freq)		// Target frequency
+  {
+    // Set up for frequency sweep
+    write3(CFR, CFR_Bits::FrequencyModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+
+    // Write the frequency into the sweep destination register
+    write4(CW1, frequencyDivider(freq));
+  }
+
+  void sweepAmplitude(ChannelNum chan, uint16_t amplitude)	// Target amplitude (half)
+  {
+    // Set up for amplitude sweep
+    write3(CFR, CFR_Bits::AmplitudeModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+
+    // Write the amplitude into the sweep destination register
+    write4(CW1, ((uint32_t)amplitude) << (32-10));
+  }
+
+  void sweepPhase(ChannelNum chan, uint16_t phase)		// Target phase (180 degrees)
+  {
+    // Set up for phase sweep
+    write3(CFR, CFR_Bits::PhaseModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+
+    // Write the phase into the sweep destination register
+    write4(CW1, ((uint32_t)phase) << (32-14));
   }
 
 protected:
@@ -237,6 +310,15 @@ protected:
     value = SPI.transfer(0);
     spi_end();
     return value;
+  }
+
+  void write4(Register reg, uint32_t value)
+  {
+    spi_begin();
+    SPI.transfer(reg);
+    for (int b = 24; b >= 0; b -= 8)
+      SPI.transfer((uint8_t)(value>>b)&0xFF); 
+    spi_end();
   }
 
   void write(Register reg, byte* buffer, int len)
