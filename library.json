@@ -1,0 +1,13 @@
+{
+  "name": "AD9959",
+  "keywords": "dds",
+  "description": "AD9959 DDS chip.",
+  "exclude": "doc",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/cjheath/AD9959.git"
+  },
+  "frameworks": "arduino",
+  "platforms": "*"
+}
