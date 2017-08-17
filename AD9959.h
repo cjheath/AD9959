@@ -35,6 +35,7 @@ template <
 	uint8_t		ChipEnablePin,		// Chip Enable (active low)
 	uint8_t		UpdatePin,		// I/O_UPDATE: Apply config changes
 	unsigned long	calibration = 10000000,	// Use your actual frequency when set to 10MHz
+	unsigned long	reference_freq = 25000000, // Use your crystal or reference frequency
 	long		SPIRate = 2000000,	// 2MBit/s (16MHz Arduino can do 8Mhz)
 	uint8_t		SPIClkPin = 13,		// Note: do not change the SPI pins, they're currently ignored.
 	uint8_t		SPIMISOPin = 12,
@@ -42,6 +43,8 @@ template <
 >
 class AD9959
 {
+  unsigned long		core_clock;		// reference_freq*pll_mult
+
 public:
   typedef enum {
     ChannelNone	= 0x00,
@@ -52,12 +55,15 @@ public:
     ChannelAll	= 0xF0,
   } ChannelNum;
 
+  static constexpr uint8_t register_length[8] = { 1, 3, 2, 3, 4, 2, 3, 2 };  // And 4 beyond that
+
   typedef enum {	// There are 334 bytes in all the registers! See why below...
     CSR               = 0x00,	// 1 byte, Channel Select Register
     FR1               = 0x01,	// 3 bytes, Function Register 1
     FR2               = 0x02,	// 2 bytes, Function Register 2
     				// The following registers are duplicated for each channel.
-				// A write goes to any and all registers based on channel select (CSR)
+				// A write goes to any and all registers enabled in channel select (CSR)
+				// To read successfully you must first select one channel
     CFR               = 0x03,	// 3 bytes, Channel Function Register (one for each channel!)
     CFTW              = 0x04,	// 4 bytes, Channel Frequency Tuning Word
     CPOW              = 0x05,	// 2 bytes, Channel Phase Offset Word (aligned to LSB, top 2 bits unused)
@@ -81,8 +87,7 @@ public:
     CW12              = 0x15,
     CW13              = 0x16,
     CW14              = 0x17,
-    CW15              = 0x18,
-    READ              = 0x80	// Pseudo-register to indicate read
+    CW15              = 0x18
   } Register;
 
   typedef struct {
@@ -170,11 +175,12 @@ public:
     // "setting SCK, MOSI, and SS to outputs, pulling SCK and MOSI low, and SS high"
     SPI.begin();
 
+    digitalWrite(ResetPin, 0);
     pinMode(ResetPin, OUTPUT);		// Ensure we can reset the AD9959
-    pinMode(ChipEnablePin, OUTPUT);	// This control signal applies the loaded values
     digitalWrite(ChipEnablePin, 1);
-    pinMode(UpdatePin, OUTPUT);		// This control signal applies the loaded values
+    pinMode(ChipEnablePin, OUTPUT);	// This control signal applies the loaded values
     digitalWrite(UpdatePin, 0);
+    pinMode(UpdatePin, OUTPUT);		// This control signal applies the loaded values
 
     reset();
   }
@@ -184,43 +190,62 @@ public:
     pulse(ResetPin);			// (minimum 5 cycles of the 30MHz clock)
     pulse(SPIClkPin);			// Enable serial loading mode:
     pulse(UpdatePin);
-    // Disable all channels, set 3-wire MSB mode:
-    write(CSR, ChannelNone|CSR_Bits::MSB_First|CSR_Bits::IO3Wire);
-    pulse(UpdatePin);
+    setChannels(ChannelNone);		// Disable all channels, set 3-wire MSB mode:
+    pulse(UpdatePin);			// Apply the changes
+    setPLLMult(20);			// Set the PLL going
+    // It will take up to a millisecond before the PLL locks and stabilises.
   }
 
-  void setVCO(int mult = 20)	// Must be 0 or in range 4..20
+  void setPLLMult(int mult = 20)	// Must be 0 or in range 4..20
   {
-    spi_begin();
+    core_clock = reference_freq*mult;
+    spiBegin();
     SPI.transfer(FR1);
-    // VCO Gain is needed for a 255-500MHz master clock:
-    SPI.transfer(FR1_Bits::VCOGain | (mult*FR1_Bits::PllDivider) | FR1_Bits::ChargePump3);
+    // VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
+    SPI.transfer(
+    	(core_clock > 200 ? FR1_Bits::VCOGain : 0)
+	| (mult*FR1_Bits::PllDivider)
+	| FR1_Bits::ChargePump3		// Lock fast
+    );
     // Profile0 means each channel is modulated by a different profile pin:
     SPI.transfer(FR1_Bits::ModLevels2 | FR1_Bits::RampUpDownOff | FR1_Bits::Profile0);
     SPI.transfer(FR1_Bits::SyncClkDisable); // Don't output SYNC_CLK
-    spi_end();
+    spiEnd();
   }
 
+  // 64-bit division is expensive. You might use this and setDivider instead of setFrequency
   uint32_t frequencyDivider(uint32_t freq) const
   {
-    return (uint32_t)(freq * 10000000ULL / calibration * 4294967296ULL / 500000000ULL);
+    return (uint32_t)(freq * 10000000ULL / calibration * 4294967296ULL / (unsigned long long)core_clock);
   }
 
   void setFrequency(ChannelNum chan, uint32_t freq)
   {
-    write4(CFTW, frequencyDivider(freq));
+    setDivider(chan, frequencyDivider(freq));
   }
 
-  void setAmplitude(ChannelNum chan, uint16_t amplitude)		// Maximum amplitude value is 1023
+  void setDivider(ChannelNum chan, uint32_t div)
   {
-    // 3 bytes, Amplitude Control Register (rate byte, control byte, scale byte)
-    // write2(ACR, amplitude);
-    // REVISIT: Not yet implemented
+    setChannels(chan);
+    write(CFTW, div);
   }
 
-  void setPhase(ChannelNum chan, uint16_t phase)			// Maximum phase value is 16383
+  void setAmplitude(ChannelNum chan, uint16_t amplitude)	// Maximum amplitude value is 1023
   {
-    write2(CPOW, phase);
+    amplitude &= 0x3FF;			// ten bits. We could clamp instead, but don't
+    setChannels(chan);
+    spiBegin();
+    SPI.transfer(ACR);			// Amplitude control register
+    SPI.transfer(0);			// Ramp-up/down rate
+    SPI.transfer(0x10 | (amplitude>>8)); // Enable amplitude multiplier, and top 2 bits of value
+    SPI.transfer(amplitude&0xFF);	// Bottom 8 bits of amplitude
+    spiEnd();
+  }
+
+  void setPhase(ChannelNum chan, uint16_t phase)		// Maximum phase value is 16383
+  {
+    setChannels(chan);
+    write(CPOW, phase & 0x3FFF);	// Phase wraps around anyway
   }
 
   void update()
@@ -230,29 +255,49 @@ public:
 
   void sweepFrequency(ChannelNum chan, uint32_t freq)		// Target frequency
   {
-    // Set up for frequency sweep
-    write3(CFR, CFR_Bits::FrequencyModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    sweepDivider(chan, frequencyDivider(freq));
+  }
 
-    // Write the frequency into the sweep destination register
-    write4(CW1, frequencyDivider(freq));
+  void sweepDivider(ChannelNum chan, uint32_t div)
+  {
+    setChannels(chan);
+    // Set up for frequency sweep
+    write(CFR, CFR_Bits::FrequencyModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    // Write the frequency divider into the sweep destination register
+    write(CW1, div);
   }
 
   void sweepAmplitude(ChannelNum chan, uint16_t amplitude)	// Target amplitude (half)
   {
-    // Set up for amplitude sweep
-    write3(CFR, CFR_Bits::AmplitudeModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    setChannels(chan);
 
-    // Write the amplitude into the sweep destination register
-    write4(CW1, ((uint32_t)amplitude) << (32-10));
+    // Set up for amplitude sweep
+    write(CFR, CFR_Bits::AmplitudeModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+
+    // Write the amplitude into the sweep destination register, MSB aligned
+    write(CW1, ((uint32_t)amplitude) << (32-10));
   }
 
   void sweepPhase(ChannelNum chan, uint16_t phase)		// Target phase (180 degrees)
   {
-    // Set up for phase sweep
-    write3(CFR, CFR_Bits::PhaseModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    setChannels(chan);
 
-    // Write the phase into the sweep destination register
-    write4(CW1, ((uint32_t)phase) << (32-14));
+    // Set up for phase sweep
+    write(CFR, CFR_Bits::PhaseModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+
+    // Write the phase into the sweep destination register, MSB aligned
+    write(CW1, ((uint32_t)phase) << (32-14));
+  }
+
+  void setChannels(ChannelNum chan)
+  {
+    write(CSR, chan|CSR_Bits::MSB_First|CSR_Bits::IO3Wire);
+  }
+
+  // To read channel registers, you must first use setChannels to select exactly one channel!
+  uint32_t read(Register reg)
+  {
+    return write(0x80|reg, 0);	// The zero data is discarded, just the return value is used
   }
 
 protected:
@@ -272,70 +317,41 @@ protected:
     digitalWrite(pin, HIGH);
   }
 
-  void chip_enable()
+  void chipEnable()
   {
     lower(ChipEnablePin);
   }
 
-  void chip_disable()
+  void chipDisable()
   {
     raise(ChipEnablePin);
   }
 
-  void spi_begin()
+  void spiBegin()
   {
     SPI.beginTransaction(SPISettings(SPIRate, LSBFIRST, SPI_MODE0));
-    chip_enable();
+    chipEnable();
   }
 
-  void spi_end()
+  void spiEnd()
   {
-    chip_disable();
+    chipDisable();
     SPI.endTransaction();
   }
 
-  void write(Register reg, byte value)
+  // Read or write the specified register (0x80 bit means read)
+  uint32_t write(uint8_t reg, uint32_t value)
   {
-    spi_begin();
+    uint32_t	rval = 0;
+    int		len = reg < sizeof(register_length) ? register_length[reg] : 4;
+    spiBegin();
     SPI.transfer(reg);
-    SPI.transfer(value);
-    spi_end();
+    while (len-- >= 0)
+      rval = (rval<<8) | SPI.transfer((value>>len*8) & 0xFF);
+    spiEnd();
+    return rval;
   }
 
-  uint8_t read(Register reg)
-  {
-    byte  value = 0;
-    spi_begin();
-    SPI.transfer(READ | reg);
-    value = SPI.transfer(0);
-    spi_end();
-    return value;
-  }
-
-  void write4(Register reg, uint32_t value)
-  {
-    spi_begin();
-    SPI.transfer(reg);
-    for (int b = 24; b >= 0; b -= 8)
-      SPI.transfer((uint8_t)(value>>b)&0xFF); 
-    spi_end();
-  }
-
-  void write(Register reg, byte* buffer, int len)
-  {
-    spi_begin();
-    SPI.transfer(reg);
-    SPI.transfer(buffer,len);
-    spi_end();
-  }
-
-  void read(Register reg, byte* buffer, int len)
-  {
-    spi_begin();
-    SPI.transfer(READ | reg);
-    SPI.transfer(buffer, len);
-    spi_end();
-  }
 };
 
 #endif  /* _AD9959_h_ */

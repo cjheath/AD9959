@@ -30,6 +30,10 @@ The Calibration parameter to the template supports frequency calibration.
 Set it to 10000000, program the chip to emit a 10MHz signal, and measure the
 actual frequency.  Then change the calibration parameter to the measured frequency.
 
+The reference_freq parameter provides your crystal frequency. The DDS core
+then runs at that frequency times the PLL multiplier, which defaults to the
+maximum of 20.
+
 The SPIRate parameter sets the SPI bit-rate.
 
 You can also provide SPI pins, but the library uses the hardware SPI anyway.
@@ -40,7 +44,8 @@ to both hardware and software implementations of SPI.
         2,              // Reset pin (active = high)
         3,              // Data Load pin (active = pulse high)
         3,              // I/O_UPDATE: Apply config changes
-        10000000        // Use your actual frequency when set to 10MHz
+        10000000,       // Use your actual frequency when set to 10MHz
+	25000000	// 25MHz crystal
     > {};
 
     MyAD9959	dds;
@@ -50,26 +55,36 @@ Alternatively, you can reset the chip at any time later:
 
     dds.reset();
 
-## Sections below here are not yet implemented; this API is proposed.
+## Changing the DDS core frequency
+
+The default core frequency is 20 times the reference frequency.
+You can set it as low as four times:
+
+    dds.setPLLMult(4);
+
+After reset or changing the PLL multiplier, the core clock will take
+up to 1 millisecond to stabilise. This library does not insert that
+delay, so you can use the time to initialise other things.
 
 ## Setting the frequency, amplitude and phase
 
-The functions setFrequency(), setAmplitude() and setPhase() prepare the signal(s) to generate:
-
-    dds.setFrequency(MyAD9959::Channel2, 7140000UL);	// 7.14MHz
-    dds.setAmplitude(MyAD9959::Channel2, 1023);		// Maximum amplitude value
-    dds.setPhase(MyAD9959::Channel2, 16383);		// Maximum phase value
-
-You can prepare multiple channels at the same time by ORing the channel numbers together,
-or separately. After preparing the signals, activate all changes at the same time:
-
-    dds.update();
-
-If you need to know the frequency divider for a given frequency
-(e.g. for use in sweeps), use the function frequencyDivider():
+The frequency divider for a given frequency is available using frequencyDivider().
+Because this conversion uses a slow 64-bit divide, you might save the result to use again.
 
     uint32_t	div;
     div = dds.frequencyDivider(455000);
+
+The functions setFrequency(), setDivider(), setAmplitude() and setPhase() prepare the signal(s) to generate:
+
+    dds.setFrequency(MyAD9959::Channel2, 7140000UL);	// shorthand for:
+    dds.setDivider(MyAD9959::Channel2, frequencyDivider(7140000UL));	// 7.14MHz
+    dds.setAmplitude(MyAD9959::Channel2, 1023);		// Maximum amplitude value
+    dds.setPhase(MyAD9959::Channel2, 16383);		// Maximum phase value (same as -1)
+
+You can prepare multiple channels at the same time by ORing the channel numbers together.
+After preparing the signals, activate all changes at the same time:
+
+    dds.update();
 
 ## Sweeps
 
@@ -77,6 +92,7 @@ To make a sweep, you must configure the starting signals as above,
 then either the destination frequency, amplitude or phase:
 
     dds.sweepFrequency(MyAD9959::Channel0|MyAD9959::Channel1, 8000000);	// Target frequency
+    dds.sweepDivider(MyAD9959::Channel0|MyAD9959::Channel1, div);	// Target frequency divider
     dds.sweepAmplitude(MyAD9959::Channel0|MyAD9959::Channel1, 512);	// Target amplitude (half)
     dds.sweepPhase(MyAD9959::Channel0|MyAD9959::Channel1, 8192);	// Target phase (180 degrees)
 
