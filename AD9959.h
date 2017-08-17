@@ -43,7 +43,8 @@ template <
 >
 class AD9959
 {
-  unsigned long		core_clock;		// reference_freq*pll_mult
+  uint32_t		core_clock;		// reference_freq*pll_mult
+  uint8_t		last_channels;
 
 public:
   typedef enum {
@@ -170,6 +171,8 @@ public:
   } CFR_Bits;
 
   AD9959()
+  : core_clock(0)
+  , last_channels(0xF0)
   {
     // Ensure that the SPI device is initialised
     // "setting SCK, MOSI, and SS to outputs, pulling SCK and MOSI low, and SS high"
@@ -190,6 +193,7 @@ public:
     pulse(ResetPin);			// (minimum 5 cycles of the 30MHz clock)
     pulse(SPIClkPin);			// Enable serial loading mode:
     pulse(UpdatePin);
+    last_channels = ChannelAll;		// Ensure it gets set, not optimised out
     setChannels(ChannelNone);		// Disable all channels, set 3-wire MSB mode:
     pulse(UpdatePin);			// Apply the changes
     setPLLMult(20);			// Set the PLL going
@@ -255,45 +259,76 @@ public:
     pulse(UpdatePin);
   }
 
-  void sweepFrequency(ChannelNum chan, uint32_t freq)		// Target frequency
+  void sweepFrequency(ChannelNum chan, uint32_t freq, bool follow = true)		// Target frequency
   {
-    sweepDivider(chan, frequencyDivider(freq));
+    sweepDivider(chan, frequencyDivider(freq), follow);
   }
 
-  void sweepDivider(ChannelNum chan, uint32_t div)
+  void sweepDivider(ChannelNum chan, uint32_t div, bool follow = true)
   {
     setChannels(chan);
     // Set up for frequency sweep
-    write(CFR, CFR_Bits::FrequencyModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    write(
+      CFR,
+      CFR_Bits::FrequencyModulation |
+      CFR_Bits::SweepEnable |
+      CFR_Bits::DACFullScale |
+      CFR_Bits::MatchPipeDelay |
+      (follow ? 0 : CFR_Bits::SweepNoDwell)
+    );
     // Write the frequency divider into the sweep destination register
     write(CW1, div);
   }
 
-  void sweepAmplitude(ChannelNum chan, uint16_t amplitude)	// Target amplitude (half)
+  void sweepAmplitude(ChannelNum chan, uint16_t amplitude, bool follow = true)	// Target amplitude (half)
   {
     setChannels(chan);
 
     // Set up for amplitude sweep
-    write(CFR, CFR_Bits::AmplitudeModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    write(
+      CFR,
+      CFR_Bits::AmplitudeModulation |
+      CFR_Bits::SweepEnable |
+      CFR_Bits::DACFullScale |
+      CFR_Bits::MatchPipeDelay |
+      (follow ? 0 : CFR_Bits::SweepNoDwell)
+    );
 
     // Write the amplitude into the sweep destination register, MSB aligned
     write(CW1, ((uint32_t)amplitude) << (32-10));
   }
 
-  void sweepPhase(ChannelNum chan, uint16_t phase)		// Target phase (180 degrees)
+  void sweepPhase(ChannelNum chan, uint16_t phase, bool follow = true)		// Target phase (180 degrees)
   {
     setChannels(chan);
 
     // Set up for phase sweep
-    write(CFR, CFR_Bits::PhaseModulation|CFR_Bits::SweepEnable|CFR_Bits::DACFullScale|CFR_Bits::MatchPipeDelay);
+    write(
+      CFR,
+      CFR_Bits::PhaseModulation |
+      CFR_Bits::SweepEnable |
+      CFR_Bits::DACFullScale |
+      CFR_Bits::MatchPipeDela |
+      (follow ? 0 : CFR_Bits::SweepNoDwell)
+    );
 
     // Write the phase into the sweep destination register, MSB aligned
     write(CW1, ((uint32_t)phase) << (32-14));
   }
 
+  void sweepRates(ChannelNum chan, uint32_t increment, uint8_t up_rate, uint32_t decrement = 0, uint8_t down_rate = 0)
+  {
+    setChannels(chan);
+    write(RDW, increment);			// Rising Sweep Delta Word
+    write(FDW, increment);			// Falling Sweep Delta Word
+    write(LSRR, (down_rate<<8) | up_rate);	// Linear Sweep Ramp Rate
+  }
+
   void setChannels(ChannelNum chan)
   {
-    write(CSR, chan|CSR_Bits::MSB_First|CSR_Bits::IO3Wire);
+    if (last_channels != chan)
+      write(CSR, chan|CSR_Bits::MSB_First|CSR_Bits::IO3Wire);
+    last_channels = chan;
   }
 
   // To read channel registers, you must first use setChannels to select exactly one channel!

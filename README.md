@@ -96,24 +96,8 @@ all changes at the same time:
 ## Sweeps
 
 To make a sweep, you must configure the starting signals as above,
-then either the destination frequency, amplitude or phase:
-
-    dds.sweepFrequency(MyAD9959::Channel0|MyAD9959::Channel1, 8000000);	// Target frequency
-    dds.sweepDivider(MyAD9959::Channel0|MyAD9959::Channel1, div);	// Target frequency divider
-    dds.sweepAmplitude(MyAD9959::Channel0|MyAD9959::Channel1, 512);	// Target amplitude (half)
-    dds.sweepPhase(MyAD9959::Channel0|MyAD9959::Channel1, 8192);	// Target phase (180 degrees)
-
-Next, set up and down sweep rates by providing the step size and
-the step rate.  A frequency step size is converted from a frequency
-value into a divider value, so it's not exact (32 bit resolution) -
-use frequencyDivider() to get the exact values.  The step rate is
-8 bit unsigned, expressing a multiple of 4 core clock cycles (125MHz
-if 500MHz core), so the shortest step is 8ns, the longest step is
-2.048us.  You can change the sweep parameters during a sweep.
-Unfortunately there's no way to read back the sweep progress.
-
-    dds.sweepUpRate(MyAD9959::Channel0|MyAD9959::Channel1, 100, 1000);	// Set the sweep up rate
-    dds.sweepDownRate(MyAD9959::Channel0|MyAD9959::Channel1, 100, 1000);// Set the sweep down rate
+then either the destination frequency, amplitude or phase, and
+sweep mode.
 
 There are two sweep modes; follow (default) and no-dwell. In follow mode,
 the sweep direction always follows the profile pin; sweeping up when the
@@ -122,17 +106,41 @@ it reaches the defined destination. In no-dwell mode, setting the profile
 pin high causes a rising sweep to start, hit the top, then jump back to
 the starting value and stay there until the next positive edge.
 
-    dds.sweepFollow(bool = true);	// sweep in the direction indicated by the profile pin
+    void sweepFrequency(ChannelNum chan, uint32_t freq, bool follow = true);
+    ... etc
 
-After setting up one or more channels' sweep parameters, start the sweep by
-toggling the configured profile pin(s). If you toggle the pins together, or
-wire two profile pins to the same output, they'll start in sync.
+    dds.sweepFrequency(MyAD9959::Channel0|MyAD9959::Channel1, 8000000);	// Target frequency
+    dds.sweepDivider(MyAD9959::Channel0|MyAD9959::Channel1, div, false);	// Target frequency divider
+    dds.sweepAmplitude(MyAD9959::Channel0|MyAD9959::Channel1, 512);	// Target amplitude (half)
+    dds.sweepPhase(MyAD9959::Channel0|MyAD9959::Channel1, 8192);	// Target phase (180 degrees)
+
+Next, set up and down sweep rates by providing the step size and
+the step rate.  A frequency step is a change in the divider value,
+so you'll need to use frequencyDivider() to get the exact values.
+The step rate is 8 bit unsigned, expressing a multiple of 4 core
+clock cycles. With a 500MHz core clock, the shortest step is 8ns,
+a step of 125 gets you 1us steps, and the longest step is 2.048us.
+
+    void sweepRates(ChannelNum chan, uint32_t increment, uint8_t up_rate, uint32_t decrement, uint8_t down_rate);
+
+    // Sweep up at increments of 100 each 1us, and down 1000 each 2us:
+    dds.sweepRates(MyAD9959::Channel0|MyAD9959::Channel1, 100, 125, 1000, 250);
+
+After setting up one or more channels' sweep parameters, start the
+sweep by toggling the configured profile pin(s). If you toggle the
+pins together, or wire two profile pins to the same output, they'll
+start in sync.
+
+You can change the sweep parameters during a sweep.  Unfortunately
+there's no way to read back the sweep progress, so you must track
+the time since you started the sweep to know what it's up to and
+when it's finished.
 
 ## Reading internal registers
 
 You can read back the value of any of the registers. Beware that
 reading any of the (duplicated) channel registers requires first
-selecting just one channel first:
+selecting just one channel:
 
     dds.setChannels(MyAD9959::Channel0);
     uint32_t value = dds.read(MyAD9959::CFTW);	// Read the current divider
