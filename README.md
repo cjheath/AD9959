@@ -23,7 +23,8 @@ The internal PLL clock multiplier defaults to 20, which produces
 this if needed.
 
 This library does not support configuring modulation or the power-down
-modes.
+modes. Ramp-up and ramp-down (amplitude ramping, available when
+using frequency or phase modulation) is also not available.
 
 ## Setup Functions
 
@@ -31,13 +32,14 @@ Instantiate the AD9959 template with the appropriate parameters.
 You must provide pin numbers for Chip Enable, Reset, and I/O Update.
 
 The Calibration parameter to the template supports frequency
-calibration.  Set it to 10000000, program the chip to emit a 10MHz
-signal, and measure the actual frequency.  Then change the calibration
-parameter to the measured frequency.
+calibration.  Set it first to the default 10000000, program the
+chip to emit a 10MHz signal, and measure the actual frequency.
+Then change the calibration parameter to the measured frequency
+and recompile.
 
-The reference_freq parameter provides your crystal frequency. The
-DDS core then runs at that frequency times the PLL multiplier, which
-defaults to the maximum of 20.
+The reference_freq parameter provides your crystal frequency.
+The DDS core then runs at that frequency times the PLL multiplier,
+which defaults to the maximum of 20.
 
 The SPIRate parameter sets the SPI bit-rate. This library uses the
 Arduino standard hardware SPI device.
@@ -47,7 +49,7 @@ Arduino standard hardware SPI device.
         3,              // Chip Enable (active = low)
         3,              // I/O_UPDATE: Apply config changes (pulse high)
         10000000,       // Use your actual frequency when set to 10MHz (optional)
-	25000000	// 25MHz crystal (optional)
+        25000000        // 25MHz crystal (optional)
     > {};
 
     MyAD9959	dds;
@@ -60,13 +62,13 @@ Alternatively, you can reset the chip at any time later:
 ## Changing the DDS core frequency
 
 The default core frequency is 20 times the reference frequency.
-You can set it as low as four times:
+You can set it as low as 4. Any other value disables the multiplier.
 
     dds.setPLLMult(4);
 
 After reset or changing the PLL multiplier, the core clock will take
 up to 1 millisecond to stabilise. This library does not insert that
-delay, so you can use the time to initialise other things.
+delay, so you can use that time to initialise other things.
 
 ## Setting the frequency, amplitude and phase
 

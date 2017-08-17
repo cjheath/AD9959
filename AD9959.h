@@ -198,6 +198,8 @@ public:
 
   void setPLLMult(int mult = 20)	// Must be 0 or in range 4..20
   {
+    if (mult < 4 || mult > 20)
+    	mult = 1;			// Multiplier is disabled.
     core_clock = reference_freq*mult;
     spiBegin();
     SPI.transfer(FR1);
