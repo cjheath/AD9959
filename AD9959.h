@@ -42,7 +42,7 @@ template <
 >
 class AD9959
 {
-  uint32_t              core_clock;             // reference_freq*pll_mult
+  uint32_t              core_clock_reciprocal;  // 1/(reference_freq*pll_mult)
   uint8_t               last_channels;
 
 public:
@@ -170,7 +170,7 @@ public:
   } CFR_Bits;
 
   AD9959()
-  : core_clock(0)
+  : core_clock_reciprocal(0)
   , last_channels(0xF0)
   {
     // Ensure that the SPI device is initialised
@@ -203,11 +203,12 @@ public:
   {
     if (mult < 4 || mult > 20)
         mult = 1;                       // Multiplier is disabled.
-    core_clock = reference_freq * mult * 10000000ULL / calibration;
+    uint32_t	core_clock = reference_freq * mult * 10000000ULL / calibration;
+    core_clock_reciprocal = ((1ULL<<32)+core_clock/2)/core_clock;
     spiBegin();
     SPI.transfer(FR1);
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
-    // In-between is unspecifie.
+    // In-between is unspecified.
     SPI.transfer(
         (core_clock > 200 ? FR1_Bits::VCOGain : 0)
         | (mult*FR1_Bits::PllDivider)
@@ -219,10 +220,11 @@ public:
     spiEnd();
   }
 
-  // 64-bit division is expensive. You might use this and setDivider instead of setFrequency
+  // 64-bit division is expensive. We use division by reciprocal multiplication instead.
+  // Still, you might use this and setDivider instead of setFrequency
   uint32_t frequencyDivider(uint32_t freq) const
   {
-    return (uint32_t)(freq * 4294967296ULL / (unsigned long long)core_clock);
+    return freq * core_clock_reciprocal;	// This overflows, and that's ok.
   }
 
   void setFrequency(ChannelNum chan, uint32_t freq)
