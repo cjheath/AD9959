@@ -19,8 +19,8 @@ pins. This library expects you to control the profile pins if you
 want to start and stop sweeps.
 
 The internal PLL clock multiplier defaults to 20, which produces
-500MHz from a 25MHz crystal. You can call setPLLMult() to change
-this if needed.
+500MHz from a 25MHz crystal. You can call setClock() to change
+this if needed, or to apply a frequency calibration constant.
 
 This library does not support configuring modulation or the power-down
 modes. Ramp-up and ramp-down (amplitude ramping, available when
@@ -30,12 +30,6 @@ using frequency or phase modulation) is also not available.
 
 Instantiate the AD9959 template with the appropriate parameters.
 You must provide pin numbers for Chip Enable, Reset, and I/O Update.
-
-The Calibration parameter to the template supports frequency
-calibration.  Set it first to the default 10000000, program the
-chip to emit a 10MHz signal, and measure the actual frequency.
-Then change the calibration parameter to the measured frequency
-and recompile.
 
 The reference_freq parameter provides your crystal frequency.
 The DDS core then runs at that frequency times the PLL multiplier,
@@ -48,7 +42,6 @@ Arduino standard hardware SPI device.
         2,              // Reset pin (active = high)
         3,              // Chip Enable (active = low)
         3,              // I/O_UPDATE: Apply config changes (pulse high)
-        10000000,       // Use your actual frequency when set to 10MHz (optional)
         25000000        // 25MHz crystal (optional)
     > {};
 
@@ -61,10 +54,19 @@ Alternatively, you can reset the chip at any time later:
 
 ## Changing the DDS core frequency
 
+Configure the PLL multiplier or apply a core frequency calibration
+by calling setClock().
 The default core frequency is 20 times the reference frequency.
-You can set it as low as 4. Any other value disables the multiplier.
+You can set the multiplier as low as 4. Any other value disables the multiplier.
 
-    dds.setPLLMult(4);
+The calibration parameter supports frequency calibration.
+Set it first to the default 10000000, program the chip to emit
+a 10MHz signal, and measure the actual frequency. The measured
+frequency is your new calibration value.
+
+    setClock(int mult = 20, uint32_t calibration = 10000000)
+
+    dds.setClock(4, 9987654);
 
 After reset or changing the PLL multiplier, the core clock will take
 up to 1 millisecond to stabilise. This library does not insert that
@@ -72,9 +74,9 @@ delay, so you can use that time to initialise other things.
 
 ## Setting the frequency, amplitude and phase
 
-The frequency divider for a given frequency (after calibration, if
-any) is obtained using frequencyDivider().  Because this conversion
-uses a slow 64-bit divide, you might save the result to use again.
+The frequency divider for a given frequency is obtained using
+frequencyDivider().  Because this conversion uses a slow 64-bit
+divide, you might save the result to use again.
 
     uint32_t	div;
     div = dds.frequencyDivider(455000);

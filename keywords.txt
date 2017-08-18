@@ -1,6 +1,6 @@
 AD9959	KEYWORD1
-setPLLMult	KEYWORD1
 reset	KEYWORD1
+setClock	KEYWORD1
 frequencyDivider	KEYWORD1
 setFrequency	KEYWORD1
 setDivider	KEYWORD1
