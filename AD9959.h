@@ -55,8 +55,7 @@ public:
     ChannelAll  = 0xF0,
   } ChannelNum;
 
-  static constexpr uint8_t register_length[8] = { 1, 3, 2, 3, 4, 2, 3, 2 };  // And 4 beyond that
-
+  // See register_length[] in write() before re-ordering these.
   typedef enum {        // There are 334 bytes in all the registers! See why below...
     CSR               = 0x00,   // 1 byte, Channel Select Register
     FR1               = 0x01,   // 3 bytes, Function Register 1
@@ -379,6 +378,9 @@ protected:
   // Read or write the specified register (0x80 bit means read)
   uint32_t write(uint8_t reg, uint32_t value)
   {
+    // The indices of this array match the values of the Register enum:
+    static constexpr uint8_t register_length[8] = { 1, 3, 2, 3, 4, 2, 3, 2 };  // And 4 beyond that
+
     uint32_t    rval = 0;
     int         len = reg < sizeof(register_length) ? register_length[reg] : 4;
     spiBegin();
