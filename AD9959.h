@@ -33,6 +33,8 @@
 #error "Arduino 1.6.0 or later (SPI library) is required"
 #endif
 
+#define	MAX_U64	((uint64_t)~0LL)
+
 template <
         uint8_t         ResetPin,               // Reset pin (active = high)
         uint8_t         ChipEnablePin,          // Chip Enable (active low)
@@ -46,6 +48,7 @@ template <
 class AD9959
 {
   uint32_t              core_clock;             // reference_freq*pll_mult
+  uint64_t              reciprocal;            	// 2^65/core_clock
   uint8_t               last_channels;
 
 public:
@@ -206,6 +209,7 @@ public:
     if (mult < 4 || mult > 20)
         mult = 1;                       // Multiplier is disabled.
     core_clock = reference_freq * (1000000000ULL+calibration) / 1000000000ULL * mult;
+    reciprocal = (MAX_U64 - core_clock/2) / (core_clock);
     spiBegin();
     SPI.transfer(FR1);
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
@@ -224,7 +228,9 @@ public:
   // 64-bit division is expensive. You might use this and setDivider instead of setFrequency
   uint32_t frequencyDivider(uint32_t freq) const
   {
-    return (uint32_t)(freq * 4294967296ULL / (unsigned long long)core_clock);
+    // The compiler converts the division here into bit-wise extraction or at worst a shift.
+    // The AVR gcc doesn't do it the fastest way if you use an explicit shift!
+    return (freq * reciprocal + 0x84000000UL) / (0x1ULL<<32);
   }
 
   void setFrequency(ChannelNum chan, uint32_t freq)
