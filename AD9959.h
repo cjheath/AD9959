@@ -89,83 +89,83 @@ public:
     CW15              = 0x18
   } Register;
 
-  typedef struct {
+  typedef enum {
     // Bit order selection (default MSB):
-    static constexpr  uint8_t MSB_First = 0x00;
-    static constexpr  uint8_t LSB_First = 0x01;
+    MSB_First = 0x00,
+    LSB_First = 0x01,
     // Serial I/O Modes (default IO2Wire):
-    static constexpr  uint8_t IO2Wire = 0x00;
-    static constexpr  uint8_t IO3Wire = 0x02;
-    static constexpr  uint8_t IO2Bit = 0x04;
-    static constexpr  uint8_t IO4Bit = 0x06;
+    IO2Wire = 0x00,
+    IO3Wire = 0x02,
+    IO2Bit = 0x04,
+    IO4Bit = 0x06,
   } CSR_Bits;
 
-  typedef struct {    // Function Register 1 is 3 bytes wide.
+  typedef enum {    // Function Register 1 is 3 bytes wide.
     // Most significant byte:
     // Higher charge pump values decrease lock time and increase phase noise
-    static constexpr  uint32_t ChargePump0      = 0x00;
-    static constexpr  uint32_t ChargePump1      = 0x01;
-    static constexpr  uint32_t ChargePump2      = 0x02;
-    static constexpr  uint32_t ChargePump3      = 0x03;
+    ChargePump0      = 0x00,
+    ChargePump1      = 0x01,
+    ChargePump2      = 0x02,
+    ChargePump3      = 0x03,
 
-    static constexpr  uint32_t PllDivider       = 0x04; // multiply 4..20 by this (or shift 19)
-    static constexpr  uint32_t VCOGain          = 0x80; // Set low for VCO<160MHz, high for >255MHz
+    PllDivider       = 0x04, // multiply 4..20 by this (or shift 19)
+    VCOGain          = 0x80, // Set low for VCO<160MHz, high for >255MHz
 
     // Middle byte:
-    static constexpr  uint32_t ModLevels2       = 0x00; // How many levels of modulation?
-    static constexpr  uint32_t ModLevels4       = 0x01;
-    static constexpr  uint32_t ModLevels8       = 0x02;
-    static constexpr  uint32_t ModLevels16      = 0x03;
+    ModLevels2       = 0x00, // How many levels of modulation?
+    ModLevels4       = 0x01,
+    ModLevels8       = 0x02,
+    ModLevels16      = 0x03,
 
-    static constexpr  uint32_t RampUpDownOff    = 0x00;
-    static constexpr  uint32_t RampUpDownP2P3   = 0x04; // Profile=0 means ramp-up, 1 means ramp-down
-    static constexpr  uint32_t RampUpDownP3     = 0x08; // Profile=0 means ramp-up, 1 means ramp-down
-    static constexpr  uint32_t RampUpDownSDIO123= 0x0C; // Only in 1-bit I/O mode
+    RampUpDownOff    = 0x00,
+    RampUpDownP2P3   = 0x04, // Profile=0 means ramp-up, 1 means ramp-down
+    RampUpDownP3     = 0x08, // Profile=0 means ramp-up, 1 means ramp-down
+    RampUpDownSDIO123= 0x0C, // Only in 1-bit I/O mode
 
-    static constexpr  uint32_t Profile0         = 0x00;
-    static constexpr  uint32_t Profile7         = 0x07;
+    Profile0         = 0x00,
+    Profile7         = 0x07,
 
     // Least significant byte:
-    static constexpr  uint32_t SyncAuto         = 0x00; // Master SYNC_OUT->Slave SYNC_IN, with FR2
-    static constexpr  uint32_t SyncSoft         = 0x01; // Each time this is set, system clock slips one cycle
-    static constexpr  uint32_t SyncHard         = 0x02; // Synchronise devices by slipping on SYNC_IN signal
+    SyncAuto         = 0x00, // Master SYNC_OUT->Slave SYNC_IN, with FR2
+    SyncSoft         = 0x01, // Each time this is set, system clock slips one cycle
+    SyncHard         = 0x02, // Synchronise devices by slipping on SYNC_IN signal
 
     // Software can power-down individual channels (using CFR[7:6])
-    static constexpr  uint32_t DACRefPwrDown    = 0x10; // Power-down DAC reference
-    static constexpr  uint32_t SyncClkDisable   = 0x20; // Don't output SYNC_CLK
-    static constexpr  uint32_t ExtFullPwrDown   = 0x40; // External power-down means full power-down (DAC&PLL)
-    static constexpr  uint32_t RefClkInPwrDown  = 0x80; // Disable reference clock input
+    DACRefPwrDown    = 0x10, // Power-down DAC reference
+    SyncClkDisable   = 0x20, // Don't output SYNC_CLK
+    ExtFullPwrDown   = 0x40, // External power-down means full power-down (DAC&PLL)
+    RefClkInPwrDown  = 0x80, // Disable reference clock input
   } FR1_Bits;
 
-  typedef struct {
-    static constexpr  uint32_t AllChanAutoClearSweep    = 0x8000;// Clear sweep accumulator(s) on I/O_UPDATE
-    static constexpr  uint32_t AllChanClearSweep        = 0x4000;// Clear sweep accumulator(s) immediately
-    static constexpr  uint32_t AllChanAutoClearPhase    = 0x2000;// Clear phase accumulator(s) on I/O_UPDATE
-    static constexpr  uint32_t AllChanClearPhase        = 0x2000;// Clear phase accumulator(s) immediately
-    static constexpr  uint32_t AutoSyncEnable   = 0x0080;
-    static constexpr  uint32_t MasterSyncEnable = 0x0040;
-    static constexpr  uint32_t MasterSyncStatus = 0x0020;
-    static constexpr  uint32_t MasterSyncMask   = 0x0010;
-    static constexpr  uint32_t SystemClockOffset = 0x0003;      // Mask for 2-bit clock offset controls
+  typedef enum {
+    AllChanAutoClearSweep    = 0x8000,// Clear sweep accumulator(s) on I/O_UPDATE
+    AllChanClearSweep        = 0x4000,// Clear sweep accumulator(s) immediately
+    AllChanAutoClearPhase    = 0x2000,// Clear phase accumulator(s) on I/O_UPDATE
+    AllChanClearPhase        = 0x2000,// Clear phase accumulator(s) immediately
+    AutoSyncEnable   = 0x0080,
+    MasterSyncEnable = 0x0040,
+    MasterSyncStatus = 0x0020,
+    MasterSyncMask   = 0x0010,
+    SystemClockOffset = 0x0003,      // Mask for 2-bit clock offset controls
   } FR2_Bits;
 
-  typedef struct {
-    static constexpr  uint32_t ModulationMode   = 0xC00000;     // Mask for modulation mode
-    static constexpr  uint32_t AmplitudeModulation= 0x400000;   // Mask for modulation mode
-    static constexpr  uint32_t FrequencyModulation= 0x800000;   // Mask for modulation mode
-    static constexpr  uint32_t PhaseModulation  = 0xC00000;     // Mask for modulation mode
-    static constexpr  uint32_t SweepNoDwell     = 0x008000;     // No dwell mode
-    static constexpr  uint32_t SweepEnable      = 0x004000;     // Enable the sweep
-    static constexpr  uint32_t SweepStepTimerExt = 0x002000;    // Reset the sweep step timer on I/O_UPDATE
-    static constexpr  uint32_t DACFullScale     = 0x000300;     // 1/8, 1/4, 1/2 or full DAC current
-    static constexpr  uint32_t DigitalPowerDown = 0x000080;     // Power down the DDS core
-    static constexpr  uint32_t DACPowerDown     = 0x000040;     // Power down the DAC
-    static constexpr  uint32_t MatchPipeDelay   = 0x000020;     // 
-    static constexpr  uint32_t AutoclearSweep   = 0x000010;     // Clear the sweep accumulator on I/O_UPDATE
-    static constexpr  uint32_t ClearSweep       = 0x000008;     // Clear the sweep accumulator immediately
-    static constexpr  uint32_t AutoclearPhase   = 0x000004;     // Clear the phase accumulator on I/O_UPDATE
-    static constexpr  uint32_t ClearPhase       = 0x000002;     // Clear the phase accumulator immediately
-    static constexpr  uint32_t OutputSineWave   = 0x000001;     // default is cosine
+  typedef enum {
+    ModulationMode   = 0xC00000,     // Mask for modulation mode
+    AmplitudeModulation= 0x400000,   // Mask for modulation mode
+    FrequencyModulation= 0x800000,   // Mask for modulation mode
+    PhaseModulation  = 0xC00000,     // Mask for modulation mode
+    SweepNoDwell     = 0x008000,     // No dwell mode
+    SweepEnable      = 0x004000,     // Enable the sweep
+    SweepStepTimerExt = 0x002000,    // Reset the sweep step timer on I/O_UPDATE
+    DACFullScale     = 0x000300,     // 1/8, 1/4, 1/2 or full DAC current
+    DigitalPowerDown = 0x000080,     // Power down the DDS core
+    DACPowerDown     = 0x000040,     // Power down the DAC
+    MatchPipeDelay   = 0x000020,     // Compensate for pipeline delays
+    AutoclearSweep   = 0x000010,     // Clear the sweep accumulator on I/O_UPDATE
+    ClearSweep       = 0x000008,     // Clear the sweep accumulator immediately
+    AutoclearPhase   = 0x000004,     // Clear the phase accumulator on I/O_UPDATE
+    ClearPhase       = 0x000002,     // Clear the phase accumulator immediately
+    OutputSineWave   = 0x000001,     // default is cosine
   } CFR_Bits;
 
   AD9959()
