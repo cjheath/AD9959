@@ -55,28 +55,32 @@ Alternatively, you can reset the chip at any time later:
 ## Changing the DDS core frequency
 
 Configure the PLL multiplier or apply a core frequency calibration
-by calling setClock().
-The default core frequency is 20 times the reference frequency.
-You can set the multiplier as low as 4. Any other value disables the multiplier.
+by calling setClock().  The default core frequency is 20 times the
+reference frequency.  You can set the multiplier as low as 4.
+Any other value disables the multiplier.
 
 The calibration parameter supports frequency calibration.
-Set it first to the default 10000000, program the chip to emit
-a 10MHz signal, and measure the actual frequency. The measured
-frequency is your new calibration value.
+Set it first to the default 0 (no adjustment), and program the
+chip to emit a 10MHz signal (or something else you can measure
+accurately) and measure the actual frequency. Convert the error
+to parts-per-billion (positive if your frequency is high, negative
+if it's low). Provide this value as your new calibration value.
 
-    setClock(int mult = 20, uint32_t calibration = 10000000)
+    setClock(int mult = 20, uint32_t calibration = 0)
 
-    dds.setClock(4, 9987654);
+    dds.setClock(4, 1200);
 
 After reset or changing the PLL multiplier, the core clock will take
 up to 1 millisecond to stabilise. This library does not insert that
-delay, so you can use that time to initialise other things.
+delay, so you can use that time to initialise other things. With the
+calibration provided the library computes the accurate core frequency
+which is used in creating new frequency divisors.
 
 ## Setting the frequency, amplitude and phase
 
 The frequency divider for a given frequency is obtained using
-frequencyDivider().  Because this conversion uses a slow 64-bit
-divide, you might save the result to use again.
+frequencyDivider().  Because this conversion uses slow 64-bit
+arithmetic, you might save the result to use later.
 
     uint32_t	div;
     div = dds.frequencyDivider(455000);

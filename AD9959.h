@@ -15,9 +15,12 @@
  * 3v3                          to AD9959 Digital Vcc
  * 3v3                          to AD9959 Analog Vcc (+bead/filter)
  *
- * To calibrate, use the default calibration value (10MHz) and measure
- * the generated frequency with a frequency counter. Then provide that
- * value to setClock() as the calibration constant instead.
+ * To calibrate, use a zero calibration value, set some frequency and
+ * measure it as accurately as you can with a frequency counter.
+ * Convert that value to parts-per-billion error (positive if the
+ * frequency is high, negative if low) and provide that value to
+ * setClock() as the calibration value instead. This will calculate
+ * the actual core frequency and base dividers off that.
  */
 
 #ifndef _AD9959_h_
@@ -198,11 +201,11 @@ public:
     // It will take up to a millisecond before the PLL locks and stabilises.
   }
 
-  void setClock(int mult = 20, uint32_t calibration = 10000000) // Mult must be 0 or in range 4..20
+  void setClock(int mult = 20, int32_t calibration = 0) // Mult must be 0 or in range 4..20
   {
     if (mult < 4 || mult > 20)
         mult = 1;                       // Multiplier is disabled.
-    core_clock = reference_freq * mult * 10000000ULL / calibration;
+    core_clock = reference_freq * (1000000000ULL+calibration) / 1000000000ULL * mult;
     spiBegin();
     SPI.transfer(FR1);
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
@@ -294,7 +297,7 @@ public:
     );
 
     // Write the amplitude into the sweep destination register, MSB aligned
-    write(CW1, ((uint32_t)amplitude) << (32-10));
+    write(CW1, ((uint32_t)amplitude) * (0x1<<(32-10)));
   }
 
   void sweepPhase(ChannelNum chan, uint16_t phase, bool follow = true)          // Target phase (180 degrees)
@@ -312,7 +315,7 @@ public:
     );
 
     // Write the phase into the sweep destination register, MSB aligned
-    write(CW1, ((uint32_t)phase) << (32-14));
+    write(CW1, ((uint32_t)phase) * (0x1<<(32-14)));
   }
 
   void sweepRates(ChannelNum chan, uint32_t increment, uint8_t up_rate, uint32_t decrement = 0, uint8_t down_rate = 0)
