@@ -33,7 +33,9 @@
 #error "Arduino 1.6.0 or later (SPI library) is required"
 #endif
 
+#if	!defined(MAX_U64)
 #define	MAX_U64	((uint64_t)~0LL)
+#endif
 
 template <
         uint8_t         ResetPin,               // Reset pin (active = high)
@@ -209,7 +211,7 @@ public:
     if (mult < 4 || mult > 20)
         mult = 1;                       // Multiplier is disabled.
     core_clock = reference_freq * (1000000000ULL+calibration) / 1000000000ULL * mult;
-    reciprocal = (MAX_U64 - core_clock/2) / (core_clock);
+    reciprocal = MAX_U64 / core_clock;
     spiBegin();
     SPI.transfer(FR1);
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
@@ -230,7 +232,7 @@ public:
   {
     // The compiler converts the division here into bit-wise extraction or at worst a shift.
     // The AVR gcc doesn't do it the fastest way if you use an explicit shift!
-    return (freq * reciprocal + 0x84000000UL) / (0x1ULL<<32);
+    return (freq * reciprocal + 0x80000000UL) / (0x1ULL<<32);
   }
 
   void setFrequency(ChannelNum chan, uint32_t freq)
