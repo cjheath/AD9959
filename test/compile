@@ -1,1 +1,1 @@
-g++ --std=c++11 -I. -I.. -o ddstest ddstest.cpp
+g++ --std=c++11 -I. -I.. "$@" -o ddstest ddstest.cpp

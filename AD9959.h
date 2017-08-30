@@ -33,8 +33,12 @@
 #error "Arduino 1.6.0 or later (SPI library) is required"
 #endif
 
+#if	defined(DDS_MAX_PRECISION)
 #if	!defined(MAX_U64)
 #define	MAX_U64	((uint64_t)~0LL)
+#endif
+#else
+#define	MAX_CORE_32	((01ULL<<28)<<32)	// MAX_CORE_32/core_freq fits in 32 bits
 #endif
 
 template <
@@ -50,7 +54,11 @@ template <
 class AD9959
 {
   uint32_t              core_clock;             // reference_freq*pll_mult
-  uint64_t              reciprocal;            	// 2^65/core_clock
+#if	defined(DDS_MAX_PRECISION)
+  uint64_t              reciprocal;            	// (2^64-1)/core_clock
+#else
+  uint32_t              reciprocal;            	// 2^60/core_clock
+#endif
   uint8_t               last_channels;
 
 public:
@@ -211,7 +219,13 @@ public:
     if (mult < 4 || mult > 20)
         mult = 1;                       // Multiplier is disabled.
     core_clock = reference_freq * (1000000000ULL+calibration) / 1000000000ULL * mult;
+#if	defined(DDS_MAX_PRECISION)
     reciprocal = MAX_U64 / core_clock;
+#else
+    // The AVR gcc implementation has a 32x32->64 widening multiply.
+    // This is quite accurate enough, and considerably faster than full 64x64.
+    reciprocal = MAX_CORE_32 / core_clock;
+#endif
     spiBegin();
     SPI.transfer(FR1);
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
@@ -232,7 +246,11 @@ public:
   {
     // The compiler converts the division here into bit-wise extraction or at worst a shift.
     // The AVR gcc doesn't do it the fastest way if you use an explicit shift!
+#if	defined(DDS_MAX_PRECISION)
     return (freq * reciprocal + 0x80000000UL) / (0x1ULL<<32);
+#else
+    return ((uint64_t)freq * reciprocal + 0x08800000UL) / (0x1ULL<<28);
+#endif
   }
 
   void setFrequency(ChannelNum chan, uint32_t freq)

@@ -25,7 +25,6 @@ class MyAD9959
 void test_dividers(MyAD9959& dds)
 {
 	int		count = 0;
-	int		exact = 0;
 	int		low = 0;
 	int		high = 0;
 	uint32_t	last = 1;
@@ -49,7 +48,7 @@ void test_dividers(MyAD9959& dds)
 		{
 			decade++;
 			pow10 *= 10;
-			printf("Progress to %d: %d frequencies tested, %d exact, %d low, %d high, %d bad\n", pow10, count, exact, low, high, count-exact-low-high);
+			printf("Progress to %d: %d frequencies tested, %d low, %d high, %d bad\n", pow10, count, low, high, count-low-high);
 		}
 
 		uint32_t	divisor = dds.frequencyDivider(freq);
@@ -60,35 +59,42 @@ void test_dividers(MyAD9959& dds)
 		double		epsilon_acc = facc-freq; // difference between desired and generated, normal method
 		sum_of_squares_gen += epsilon_gen*epsilon_gen;
 		sum_of_squares_acc += epsilon_acc*epsilon_acc;
+		bool		bad = 0;
 		if (fgen > freq)
+		{
 			sum_of_squares_high += epsilon_gen*epsilon_gen;
+			if (fgen < freq+1)
+				high++;
+			else
+				bad = 1;
+		}
 		if (fgen < freq)
+		{
 			sum_of_squares_low += epsilon_gen*epsilon_gen;
+			if (fgen > freq-1)
+				low++;
+			else
+				bad = 1;
+		}
+
 		// printf("Wanted %u, Gen %0.4f Acc %0.4f Epsilon gen %g acc %g\n", freq, fgen, facc, epsilon_gen, epsilon_acc);
 
 		if (verbose)
 			printf("%u -> %u for %.4f ", freq, divisor, fgen);
+
 		if (divisor == accurate)
 		{
-			exact++;
 			if (verbose)
 				printf("good\n");
 		}
 		else
 		{
-			const char*	s = "acceptable";
-			if (divisor == accurate-1)
-				low++;
-			else if (divisor == accurate+1)
-				high++;
-			else
-				s = "bad";
 			if (verbose)
-				printf("expected %u (%s)\n", accurate, s);
+				printf("expected %u (%s)\n", accurate, bad ? "bad" : "acceptable");
 		}
 		count++;
 	}
-	printf("%d frequencies tested, %d exact, %d low, %d high, %d bad\n", count, exact, low, high, count-exact-low-high);
+	printf("%d frequencies tested, %d low, %d high, %d bad\n", count, low, high, count-low-high);
 	printf(
 		"Frequency Standard Deviation using reciprocal method %gHz, accurate %gHz\n",
 		sqrt(sum_of_squares_gen/count),
