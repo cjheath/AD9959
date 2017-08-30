@@ -75,22 +75,22 @@ After reset or changing the PLL multiplier, the core clock will take
 up to 1 millisecond to stabilise. This library does not insert that
 delay, so you can use that time to initialise other things. With the
 calibration provided the library computes the accurate core frequency
-which is used in creating new frequency divisors.
+which is used in creating new frequency delta words.
 
 ## Setting the frequency, amplitude and phase
 
-The frequency divider for a given frequency is obtained using
-frequencyDivider().  Because this conversion uses slow 64-bit
-arithmetic, you might save the result to use later.
+The frequency delta word for a given frequency is obtained using
+frequencyDelta().  This conversion uses a 32x32->64 bit multiply,
+which takes perhaps 33us, so you might save the result to use later.
 
     uint32_t	div;
-    div = dds.frequencyDivider(455000);
+    div = dds.frequencyDelta(455000);
 
-The functions setFrequency(), setDivider(), setAmplitude() and
+The functions setFrequency(), setDelta(), setAmplitude() and
 setPhase() prepare the signal(s) to generate:
 
     dds.setFrequency(MyAD9959::Channel2, 7140000UL);	// shorthand for:
-    dds.setDivider(MyAD9959::Channel2, frequencyDivider(7140000UL));	// 7.14MHz
+    dds.setDelta(MyAD9959::Channel2, frequencyDelta(7140000UL));	// 7.14MHz
     dds.setAmplitude(MyAD9959::Channel2, 1023);		// Maximum amplitude value
     dds.setPhase(MyAD9959::Channel2, 16383);		// Maximum phase value (same as -1)
 
@@ -117,13 +117,13 @@ the starting value and stay there until the next positive edge.
     ... etc
 
     dds.sweepFrequency(MyAD9959::Channel0|MyAD9959::Channel1, 8000000);	// Target frequency
-    dds.sweepDivider(MyAD9959::Channel0|MyAD9959::Channel1, div, false);	// Target frequency divider
+    dds.sweepDelta(MyAD9959::Channel0|MyAD9959::Channel1, div, false);	// Target frequency delta
     dds.sweepAmplitude(MyAD9959::Channel0|MyAD9959::Channel1, 512);	// Target amplitude (half)
     dds.sweepPhase(MyAD9959::Channel0|MyAD9959::Channel1, 8192);	// Target phase (180 degrees)
 
 Next, set up and down sweep rates by providing the step size and
-the step rate.  A frequency step is a change in the divider value,
-so you'll need to use frequencyDivider() to get the exact values.
+the step rate.  A frequency step is a change in the delta value,
+so you'll need to use frequencyDelta() to get the exact values.
 The step rate is 8 bit unsigned, expressing a multiple of 4 core
 clock cycles. With a 500MHz core clock, the shortest step is 8ns,
 a step of 125 gets you 1us steps, and the longest step is 2.048us.
@@ -150,4 +150,4 @@ reading any of the (duplicated) channel registers requires first
 selecting just one channel:
 
     dds.setChannels(MyAD9959::Channel0);
-    uint32_t value = dds.read(MyAD9959::CFTW);	// Read the current divider
+    uint32_t value = dds.read(MyAD9959::CFTW);	// Read the current delta

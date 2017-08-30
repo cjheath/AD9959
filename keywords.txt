@@ -1,14 +1,14 @@
 AD9959	KEYWORD1
 reset	KEYWORD1
 setClock	KEYWORD1
-frequencyDivider	KEYWORD1
+frequencyDelta	KEYWORD1
 setFrequency	KEYWORD1
-setDivider	KEYWORD1
+setDelta	KEYWORD1
 setAmplitude	KEYWORD1
 setPhase	KEYWORD1
 update	KEYWORD1
 sweepFrequency	KEYWORD1
-sweepDivider	KEYWORD1
+sweepDelta	KEYWORD1
 sweepAmplitude	KEYWORD1
 sweepPhase	KEYWORD1
 sweepUpRate	KEYWORD1

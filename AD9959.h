@@ -20,7 +20,7 @@
  * Convert that value to parts-per-billion error (positive if the
  * frequency is high, negative if low) and provide that value to
  * setClock() as the calibration value instead. This will calculate
- * the actual core frequency and base dividers off that.
+ * the actual core frequency and base deltas off that.
  */
 
 #ifndef _AD9959_h_
@@ -226,6 +226,8 @@ public:
     // This is quite accurate enough, and considerably faster than full 64x64.
     reciprocal = MAX_CORE_32 / core_clock;
 #endif
+    // Serial.print("core_clock="); Serial.println(core_clock);
+    // Serial.print("reciprocal="); Serial.println(reciprocal);
     spiBegin();
     SPI.transfer(FR1);
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
@@ -241,8 +243,8 @@ public:
     spiEnd();
   }
 
-  // 64-bit division is expensive. You might use this and setDivider instead of setFrequency
-  uint32_t frequencyDivider(uint32_t freq) const
+  // 64-bit division is expensive. You might use this and setDelta instead of setFrequency
+  uint32_t frequencyDelta(uint32_t freq) const
   {
     // The compiler converts the division here into bit-wise extraction or at worst a shift.
     // The AVR gcc doesn't do it the fastest way if you use an explicit shift!
@@ -255,10 +257,10 @@ public:
 
   void setFrequency(ChannelNum chan, uint32_t freq)
   {
-    setDivider(chan, frequencyDivider(freq));
+    setDelta(chan, frequencyDelta(freq));
   }
 
-  void setDivider(ChannelNum chan, uint32_t div)
+  void setDelta(ChannelNum chan, uint32_t div)
   {
     setChannels(chan);
     write(CFTW, div);
@@ -289,10 +291,10 @@ public:
 
   void sweepFrequency(ChannelNum chan, uint32_t freq, bool follow = true)               // Target frequency
   {
-    sweepDivider(chan, frequencyDivider(freq), follow);
+    sweepDelta(chan, frequencyDelta(freq), follow);
   }
 
-  void sweepDivider(ChannelNum chan, uint32_t div, bool follow = true)
+  void sweepDelta(ChannelNum chan, uint32_t div, bool follow = true)
   {
     setChannels(chan);
     // Set up for frequency sweep
@@ -304,7 +306,7 @@ public:
       CFR_Bits::MatchPipeDelay |
       (follow ? 0 : CFR_Bits::SweepNoDwell)
     );
-    // Write the frequency divider into the sweep destination register
+    // Write the frequency delta into the sweep destination register
     write(CW1, div);
   }
 
