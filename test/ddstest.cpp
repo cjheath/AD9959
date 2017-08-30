@@ -9,6 +9,7 @@
 #include	"AD9959.h"
 
 #define	INCR		0.000005	// The smaller this number, the more test data points
+#define	MAXERR		0.08
 #define	MAX_FREQ	(500*1000*1000)
 
 bool	verbose = false;
@@ -63,7 +64,7 @@ void test_dividers(MyAD9959& dds)
 		if (fgen > freq)
 		{
 			sum_of_squares_high += epsilon_gen*epsilon_gen;
-			if (fgen < freq+1)
+			if (fgen < freq+MAXERR)
 				high++;
 			else
 				bad = 1;
@@ -71,7 +72,7 @@ void test_dividers(MyAD9959& dds)
 		if (fgen < freq)
 		{
 			sum_of_squares_low += epsilon_gen*epsilon_gen;
-			if (fgen > freq-1)
+			if (fgen > freq-MAXERR)
 				low++;
 			else
 				bad = 1;
