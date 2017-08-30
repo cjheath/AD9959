@@ -253,7 +253,8 @@ public:
 #if	defined(DDS_MAX_PRECISION)
     return (freq * reciprocal + 0x80000000UL) >> 32;
 #else
-    return ((uint64_t)freq * reciprocal + 0x08800000UL) >> shift;
+    // The reciprocal/16 is a rounding factor determined experimentally
+    return ((uint64_t)freq * reciprocal + reciprocal/16) >> shift;
 #endif
   }
 
