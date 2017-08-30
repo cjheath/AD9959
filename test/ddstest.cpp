@@ -37,8 +37,15 @@ void test_dividers(MyAD9959& dds)
 	double		sum_of_squares_acc = 0;
 	double		sum_of_squares_high = 0;
 	double		sum_of_squares_low = 0;
+	uint32_t	core_clock = MAX_FREQ;
 
-	for (double freqr = 10; freqr <= MAX_FREQ/2; freqr *= (1+INCR))
+#if	defined(CLOCK_MULTIPLIER)
+	// Test with a reduced clock rate
+	dds.setClock(CLOCK_MULTIPLIER);	// Half the core_clock frequency
+	core_clock /= (20/CLOCK_MULTIPLIER);
+#endif
+
+	for (double freqr = 10; freqr <= core_clock/2; freqr *= (1+INCR))
 	{
 		freq = floor(freqr+0.5);
 		if (freq == last)
@@ -52,10 +59,10 @@ void test_dividers(MyAD9959& dds)
 			printf("Progress to %d: %d frequencies tested, %d low, %d high, %d bad\n", pow10, count, low, high, count-low-high);
 		}
 
-		uint32_t	divisor = dds.frequencyDivider(freq);
-		uint32_t	accurate = floor(two32*freq/MAX_FREQ + 0.500);
-		double		fgen = 1ULL*MAX_FREQ*divisor/two32;
-		double		facc = 1ULL*MAX_FREQ*accurate/two32;
+		uint32_t	divisor = dds.frequencyDelta(freq);
+		uint32_t	accurate = floor(two32*freq/core_clock + 0.500);
+		double		fgen = 1ULL*core_clock*divisor/two32;
+		double		facc = 1ULL*core_clock*accurate/two32;
 		double		epsilon_gen = fgen-freq; // difference between desired and generated, reciprocal method
 		double		epsilon_acc = facc-freq; // difference between desired and generated, normal method
 		sum_of_squares_gen += epsilon_gen*epsilon_gen;

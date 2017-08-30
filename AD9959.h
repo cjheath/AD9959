@@ -37,8 +37,6 @@
 #if	!defined(MAX_U64)
 #define	MAX_U64	((uint64_t)~0LL)
 #endif
-#else
-#define	MAX_CORE_32	((01ULL<<28)<<32)	// MAX_CORE_32/core_freq fits in 32 bits
 #endif
 
 template <
@@ -57,7 +55,8 @@ class AD9959
 #if	defined(DDS_MAX_PRECISION)
   uint64_t              reciprocal;            	// (2^64-1)/core_clock
 #else
-  uint32_t              reciprocal;            	// 2^60/core_clock
+  uint32_t              reciprocal;            	// 2^(64-shift)/core_clock
+  uint8_t		shift;			// (2<<shift) < core_clock, but just (28 or less)
 #endif
   uint8_t               last_channels;
 
@@ -224,7 +223,10 @@ public:
 #else
     // The AVR gcc implementation has a 32x32->64 widening multiply.
     // This is quite accurate enough, and considerably faster than full 64x64.
-    reciprocal = MAX_CORE_32 / core_clock;
+    uint64_t	scaled = core_clock;
+    for (shift = 32; shift > 0 && (scaled&0x100000000ULL) == 0; shift--)
+    	scaled <<= 1;
+    reciprocal = (0x1ULL<<(32+shift)) / core_clock;
 #endif
     // Serial.print("core_clock="); Serial.println(core_clock);
     // Serial.print("reciprocal="); Serial.println(reciprocal);
@@ -249,9 +251,9 @@ public:
     // The compiler converts the division here into bit-wise extraction or at worst a shift.
     // The AVR gcc doesn't do it the fastest way if you use an explicit shift!
 #if	defined(DDS_MAX_PRECISION)
-    return (freq * reciprocal + 0x80000000UL) / (0x1ULL<<32);
+    return (freq * reciprocal + 0x80000000UL) >> 32;
 #else
-    return ((uint64_t)freq * reciprocal + 0x08800000UL) / (0x1ULL<<28);
+    return ((uint64_t)freq * reciprocal + 0x08800000UL) >> shift;
 #endif
   }
 
