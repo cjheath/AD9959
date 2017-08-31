@@ -263,10 +263,10 @@ public:
     setDelta(chan, frequencyDelta(freq));
   }
 
-  void setDelta(ChannelNum chan, uint32_t div)
+  void setDelta(ChannelNum chan, uint32_t delta)
   {
     setChannels(chan);
-    write(CFTW, div);
+    write(CFTW, delta);
   }
 
   void setAmplitude(ChannelNum chan, uint16_t amplitude)        // Maximum amplitude value is 1023
@@ -297,7 +297,7 @@ public:
     sweepDelta(chan, frequencyDelta(freq), follow);
   }
 
-  void sweepDelta(ChannelNum chan, uint32_t div, bool follow = true)
+  void sweepDelta(ChannelNum chan, uint32_t delta, bool follow = true)
   {
     setChannels(chan);
     // Set up for frequency sweep
@@ -310,7 +310,7 @@ public:
       (follow ? 0 : CFR_Bits::SweepNoDwell)
     );
     // Write the frequency delta into the sweep destination register
-    write(CW1, div);
+    write(CW1, delta);
   }
 
   void sweepAmplitude(ChannelNum chan, uint16_t amplitude, bool follow = true)  // Target amplitude (half)

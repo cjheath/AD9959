@@ -83,14 +83,14 @@ The frequency delta word for a given frequency is obtained using
 frequencyDelta().  This conversion uses a 32x32->64 bit multiply,
 which takes perhaps 33us, so you might save the result to use later.
 
-    uint32_t	div;
-    div = dds.frequencyDelta(455000);
+    uint32_t	delta;
+    delta = dds.frequencyDelta(455000);
 
 The functions setFrequency(), setDelta(), setAmplitude() and
 setPhase() prepare the signal(s) to generate:
 
     dds.setFrequency(MyAD9959::Channel2, 7140000UL);	// shorthand for:
-    dds.setDelta(MyAD9959::Channel2, frequencyDelta(7140000UL));	// 7.14MHz
+    dds.setDelta(MyAD9959::Channel2, dds.frequencyDelta(7140000UL));	// 7.14MHz
     dds.setAmplitude(MyAD9959::Channel2, 1023);		// Maximum amplitude value
     dds.setPhase(MyAD9959::Channel2, 16383);		// Maximum phase value (same as -1)
 
@@ -117,7 +117,7 @@ the starting value and stay there until the next positive edge.
     ... etc
 
     dds.sweepFrequency(MyAD9959::Channel0|MyAD9959::Channel1, 8000000);	// Target frequency
-    dds.sweepDelta(MyAD9959::Channel0|MyAD9959::Channel1, div, false);	// Target frequency delta
+    dds.sweepDelta(MyAD9959::Channel0|MyAD9959::Channel1, delta, false);// Target frequency delta
     dds.sweepAmplitude(MyAD9959::Channel0|MyAD9959::Channel1, 512);	// Target amplitude (half)
     dds.sweepPhase(MyAD9959::Channel0|MyAD9959::Channel1, 8192);	// Target phase (180 degrees)
 
