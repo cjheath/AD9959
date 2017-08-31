@@ -64,7 +64,7 @@ Set it first to the default 0 (no adjustment), and set the chip
 some known frequency and measure the actual frequency. Convert the
 error to parts-per-billion (positive if your frequency is high,
 negative if it's low). Provide this value as your new calibration
-value.  For example if you program 10MHz, but measure 1000043.2Hz,
+value.  For example if you program 10MHz, but measure 10000043.2Hz,
 your calibration factor should be 4320.
 
     setClock(int mult = 20, uint32_t calibration = 0)
