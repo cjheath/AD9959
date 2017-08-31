@@ -41,7 +41,7 @@ Arduino standard hardware SPI device.
     class MyAD9959 : public AD9959<
         2,              // Reset pin (active = high)
         3,              // Chip Enable (active = low)
-        3,              // I/O_UPDATE: Apply config changes (pulse high)
+        4,              // I/O_UPDATE: Apply config changes (pulse high)
         25000000        // 25MHz crystal (optional)
     > {};
 
