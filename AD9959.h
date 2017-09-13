@@ -248,8 +248,6 @@ public:
   // 64-bit division is expensive. You might use this and setDelta instead of setFrequency
   uint32_t frequencyDelta(uint32_t freq) const
   {
-    // The compiler converts the division here into bit-wise extraction or at worst a shift.
-    // The AVR gcc doesn't do it the fastest way if you use an explicit shift!
 #if	defined(DDS_MAX_PRECISION)
     return (freq * reciprocal + 0x80000000UL) >> 32;
 #else
