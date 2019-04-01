@@ -6,8 +6,6 @@ frequency, it can coordinate multi-channel sweeps over frequency,
 amplitude or phase and supports high-rate modulation.  This is a
 template class for controlling the AD9959.
 
-![AD9959 Example](examples/AD9959Sweep/AD9959Sweep.jpg)
-
 ## Hardware connection
 
 The AD9959 has both 3v3 and 1v8 supplies. The digital interface is
