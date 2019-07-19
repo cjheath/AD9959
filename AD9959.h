@@ -51,7 +51,7 @@ template <
 >
 class AD9959
 {
-  uint32_t              core_clock;             // reference_freq*pll_mult
+  uint32_t              core_clock;             // reference_freq*pll_mult after calibration
 #if	defined(DDS_MAX_PRECISION)
   uint64_t              reciprocal;            	// (2^64-1)/core_clock
 #else
@@ -225,7 +225,7 @@ public:
     // This is quite accurate enough, and considerably faster than full 64x64.
     uint64_t	scaled = core_clock;
     for (shift = 32; shift > 0 && (scaled&0x100000000ULL) == 0; shift--)
-    	scaled <<= 1;
+    	scaled <<= 1;                   // Ensure that reciprocal fits in 32 bits
     reciprocal = (0x1ULL<<(32+shift)) / core_clock;
 #endif
     // Serial.print("core_clock="); Serial.println(core_clock);
@@ -245,7 +245,7 @@ public:
     spiEnd();
   }
 
-  // 64-bit division is expensive. You might use this and setDelta instead of setFrequency
+  // Calculating deltas is expensive. You might use this infrequently and then use setDelta
   uint32_t frequencyDelta(uint32_t freq) const
   {
 #if	defined(DDS_MAX_PRECISION)
@@ -417,7 +417,7 @@ protected:
     int         len = reg < sizeof(register_length) ? register_length[reg] : 4;
     spiBegin();
     SPI.transfer(reg);
-    while (len-- >= 0)
+    while (len-- > 0)
       rval = (rval<<8) | SPI.transfer((value>>len*8) & 0xFF);
     spiEnd();
     return rval;
