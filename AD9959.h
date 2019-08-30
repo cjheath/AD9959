@@ -397,7 +397,7 @@ protected:
 
   void spiBegin()
   {
-    SPI.beginTransaction(SPISettings(SPIRate, LSBFIRST, SPI_MODE0));
+    SPI.beginTransaction(SPISettings(SPIRate, MSBFIRST, SPI_MODE0));
     chipEnable();
   }
 
