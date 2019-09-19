@@ -89,8 +89,11 @@ setPhase() prepare the signal(s) to generate:
 
     dds.setFrequency(MyAD9959::Channel2, 7140000UL);	// shorthand for:
     dds.setDelta(MyAD9959::Channel2, dds.frequencyDelta(7140000UL));	// 7.14MHz
-    dds.setAmplitude(MyAD9959::Channel2, 1023);		// Maximum amplitude value
+    dds.setAmplitude(MyAD9959::Channel2, 1024);		// Maximum amplitude value
     dds.setPhase(MyAD9959::Channel2, 16383);		// Maximum phase value (same as -1)
+
+An amplitude value of 1024 bypasses the amplitude multiplier,
+so produces a full-scale signal. The phase value is 14 bits.
 
 You can prepare multiple channels at the same time by OR-ing the
 channel numbers together.  After preparing the signals, activate

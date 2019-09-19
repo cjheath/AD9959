@@ -33,9 +33,9 @@
 #error "Arduino 1.6.0 or later (SPI library) is required"
 #endif
 
-#if	defined(DDS_MAX_PRECISION)
-#if	!defined(MAX_U64)
-#define	MAX_U64	((uint64_t)~0LL)
+#if     defined(DDS_MAX_PRECISION)
+#if     !defined(MAX_U64)
+#define MAX_U64 ((uint64_t)~0LL)
 #endif
 #endif
 
@@ -52,11 +52,11 @@ template <
 class AD9959
 {
   uint32_t              core_clock;             // reference_freq*pll_mult after calibration
-#if	defined(DDS_MAX_PRECISION)
-  uint64_t              reciprocal;            	// (2^64-1)/core_clock
+#if     defined(DDS_MAX_PRECISION)
+  uint64_t              reciprocal;             // (2^64-1)/core_clock
 #else
-  uint32_t              reciprocal;            	// 2^(64-shift)/core_clock
-  uint8_t		shift;			// (2<<shift) < core_clock, but just (28 or less)
+  uint32_t              reciprocal;             // 2^(64-shift)/core_clock
+  uint8_t               shift;                  // (2<<shift) < core_clock, but just (28 or less)
 #endif
   uint8_t               last_channels;
 
@@ -123,65 +123,76 @@ public:
     ChargePump2      = 0x02,
     ChargePump3      = 0x03,
 
-    PllDivider       = 0x04, // multiply 4..20 by this (or shift 19)
-    VCOGain          = 0x80, // Set low for VCO<160MHz, high for >255MHz
+    PllDivider       = 0x04,    // multiply 4..20 by this (or shift 19)
+    VCOGain          = 0x80,    // Set low for VCO<160MHz, high for >255MHz
 
     // Middle byte:
-    ModLevels2       = 0x00, // How many levels of modulation?
+    ModLevels2       = 0x00,    // How many levels of modulation?
     ModLevels4       = 0x01,
     ModLevels8       = 0x02,
     ModLevels16      = 0x03,
 
-    RampUpDownOff    = 0x00,
-    RampUpDownP2P3   = 0x04, // Profile=0 means ramp-up, 1 means ramp-down
-    RampUpDownP3     = 0x08, // Profile=0 means ramp-up, 1 means ramp-down
-    RampUpDownSDIO123= 0x0C, // Only in 1-bit I/O mode
+    RampUpDownOff    = 0x00,    // Which pins contol amplitude ramping?
+    RampUpDownP2P3   = 0x04,    // Profile=0 means ramp-up, 1 means ramp-down
+    RampUpDownP3     = 0x08,    // Profile=0 means ramp-up, 1 means ramp-down
+    RampUpDownSDIO123= 0x0C,    // Only in 1-bit I/O mode
 
     Profile0         = 0x00,
     Profile7         = 0x07,
 
     // Least significant byte:
-    SyncAuto         = 0x00, // Master SYNC_OUT->Slave SYNC_IN, with FR2
-    SyncSoft         = 0x01, // Each time this is set, system clock slips one cycle
-    SyncHard         = 0x02, // Synchronise devices by slipping on SYNC_IN signal
+    SyncAuto         = 0x00,    // Master SYNC_OUT->Slave SYNC_IN, with FR2
+    SyncSoft         = 0x01,    // Each time this is set, system clock slips one cycle
+    SyncHard         = 0x02,    // Synchronise devices by slipping on SYNC_IN signal
 
     // Software can power-down individual channels (using CFR[7:6])
-    DACRefPwrDown    = 0x10, // Power-down DAC reference
-    SyncClkDisable   = 0x20, // Don't output SYNC_CLK
-    ExtFullPwrDown   = 0x40, // External power-down means full power-down (DAC&PLL)
-    RefClkInPwrDown  = 0x80, // Disable reference clock input
+    DACRefPwrDown    = 0x10,    // Power-down DAC reference
+    SyncClkDisable   = 0x20,    // Don't output SYNC_CLK
+    ExtFullPwrDown   = 0x40,    // External power-down means full power-down (DAC&PLL)
+    RefClkInPwrDown  = 0x80,    // Disable reference clock input
   } FR1_Bits;
 
   typedef enum {
-    AllChanAutoClearSweep    = 0x8000,// Clear sweep accumulator(s) on I/O_UPDATE
-    AllChanClearSweep        = 0x4000,// Clear sweep accumulator(s) immediately
-    AllChanAutoClearPhase    = 0x2000,// Clear phase accumulator(s) on I/O_UPDATE
-    AllChanClearPhase        = 0x2000,// Clear phase accumulator(s) immediately
+    AllChanAutoClearSweep    = 0x8000,  // Clear sweep accumulator(s) on I/O_UPDATE
+    AllChanClearSweep        = 0x4000,  // Clear sweep accumulator(s) immediately
+    AllChanAutoClearPhase    = 0x2000,  // Clear phase accumulator(s) on I/O_UPDATE
+    AllChanClearPhase        = 0x2000,  // Clear phase accumulator(s) immediately
     AutoSyncEnable   = 0x0080,
     MasterSyncEnable = 0x0040,
     MasterSyncStatus = 0x0020,
     MasterSyncMask   = 0x0010,
-    SystemClockOffset = 0x0003,      // Mask for 2-bit clock offset controls
+    SystemClockOffset = 0x0003,         // Mask for 2-bit clock offset controls
   } FR2_Bits;
 
+  // Channel Function Register
   typedef enum {
-    ModulationMode   = 0xC00000,     // Mask for modulation mode
-    AmplitudeModulation= 0x400000,   // Mask for modulation mode
-    FrequencyModulation= 0x800000,   // Mask for modulation mode
-    PhaseModulation  = 0xC00000,     // Mask for modulation mode
-    SweepNoDwell     = 0x008000,     // No dwell mode
-    SweepEnable      = 0x004000,     // Enable the sweep
-    SweepStepTimerExt = 0x002000,    // Reset the sweep step timer on I/O_UPDATE
-    DACFullScale     = 0x000300,     // 1/8, 1/4, 1/2 or full DAC current
-    DigitalPowerDown = 0x000080,     // Power down the DDS core
-    DACPowerDown     = 0x000040,     // Power down the DAC
-    MatchPipeDelay   = 0x000020,     // Compensate for pipeline delays
-    AutoclearSweep   = 0x000010,     // Clear the sweep accumulator on I/O_UPDATE
-    ClearSweep       = 0x000008,     // Clear the sweep accumulator immediately
-    AutoclearPhase   = 0x000004,     // Clear the phase accumulator on I/O_UPDATE
-    ClearPhase       = 0x000002,     // Clear the phase accumulator immediately
-    OutputSineWave   = 0x000001,     // default is cosine
+    ModulationMode   = 0xC00000,        // Mask for modulation mode
+    AmplitudeModulation = 0x400000,     // Mask for modulation mode
+    FrequencyModulation = 0x800000,     // Mask for modulation mode
+    PhaseModulation  = 0xC00000,        // Mask for modulation mode
+    SweepNoDwell     = 0x008000,        // No dwell mode
+    SweepEnable      = 0x004000,        // Enable the sweep
+    SweepStepTimerExt = 0x002000,       // Reset the sweep step timer on I/O_UPDATE
+    DACFullScale     = 0x000300,        // 1/8, 1/4, 1/2 or full DAC current
+    DigitalPowerDown = 0x000080,        // Power down the DDS core
+    DACPowerDown     = 0x000040,        // Power down the DAC
+    MatchPipeDelay   = 0x000020,        // Compensate for pipeline delays
+    AutoclearSweep   = 0x000010,        // Clear the sweep accumulator on I/O_UPDATE
+    ClearSweep       = 0x000008,        // Clear the sweep accumulator immediately
+    AutoclearPhase   = 0x000004,        // Clear the phase accumulator on I/O_UPDATE
+    ClearPhase       = 0x000002,        // Clear the phase accumulator immediately
+    OutputSineWave   = 0x000001,        // default is cosine
   } CFR_Bits;
+
+  // Amplitude Control Register
+  typedef enum {
+    RampRate            = 0xFF0000,     // Time between ramp steps
+    StepSize            = 0x00C000,     // Amplitude step size (00=1,01=2,10=4,11=8)
+    MultiplierEnable    = 0x001000,     // 0 means bypass the amplitude multiplier
+    RampEnable          = 0x000800,     // 0 means aplitude control is manual
+    LoadARRAtIOUpdate   = 0x000400,     // Reload Amplitude Rate Register at I/O Update
+    ScaleFactor         = 0x0003FF,     // 10 bits for the amplitude target
+  } ACR_Bits;
 
   AD9959()
   : core_clock(0)
@@ -216,16 +227,16 @@ public:
   void setClock(int mult = 20, int32_t calibration = 0) // Mult must be 0 or in range 4..20
   {
     if (mult < 4 || mult > 20)
-        mult = 1;                       // Multiplier is disabled.
+      mult = 1;                         // Multiplier is disabled.
     core_clock = reference_freq * (1000000000ULL+calibration) / 1000000000ULL * mult;
-#if	defined(DDS_MAX_PRECISION)
+#if defined(DDS_MAX_PRECISION)
     reciprocal = MAX_U64 / core_clock;
 #else
     // The AVR gcc implementation has a 32x32->64 widening multiply.
     // This is quite accurate enough, and considerably faster than full 64x64.
-    uint64_t	scaled = core_clock;
+    uint64_t    scaled = core_clock;
     for (shift = 32; shift > 0 && (scaled&0x100000000ULL) == 0; shift--)
-    	scaled <<= 1;                   // Ensure that reciprocal fits in 32 bits
+      scaled <<= 1;                   // Ensure that reciprocal fits in 32 bits
     reciprocal = (0x1ULL<<(32+shift)) / core_clock;
 #endif
     // Serial.print("core_clock="); Serial.println(core_clock);
@@ -235,9 +246,9 @@ public:
     // High VCO Gain is needed for a 255-500MHz master clock, and not up to 160Mhz
     // In-between is unspecified.
     SPI.transfer(
-        (core_clock > 200 ? FR1_Bits::VCOGain : 0)
-        | (mult*FR1_Bits::PllDivider)
-        | FR1_Bits::ChargePump3         // Lock fast
+      (core_clock > 200 ? FR1_Bits::VCOGain : 0)
+      | (mult*FR1_Bits::PllDivider)
+      | FR1_Bits::ChargePump3         // Lock fast
     );
     // Profile0 means each channel is modulated by a different profile pin:
     SPI.transfer(FR1_Bits::ModLevels2 | FR1_Bits::RampUpDownOff | FR1_Bits::Profile0);
@@ -248,7 +259,7 @@ public:
   // Calculating deltas is expensive. You might use this infrequently and then use setDelta
   uint32_t frequencyDelta(uint32_t freq) const
   {
-#if	defined(DDS_MAX_PRECISION)
+#if defined(DDS_MAX_PRECISION)
     return (freq * reciprocal + 0x80000000UL) >> 32;
 #else
     // The reciprocal/16 is a rounding factor determined experimentally
@@ -267,14 +278,18 @@ public:
     write(CFTW, delta);
   }
 
-  void setAmplitude(ChannelNum chan, uint16_t amplitude)        // Maximum amplitude value is 1023
+  void setAmplitude(ChannelNum chan, uint16_t amplitude)        // Maximum amplitude value is 1024
   {
-    amplitude &= 0x3FF;                 // ten bits. We could clamp instead, but don't
+    if (amplitude > 1024)
+      amplitude = 1024;                 // Clamp to the maximum
     setChannels(chan);
     spiBegin();
     SPI.transfer(ACR);                  // Amplitude control register
-    SPI.transfer(0);                    // Ramp-up/down rate
-    SPI.transfer(0x10 | (amplitude>>8)); // Enable amplitude multiplier, and top 2 bits of value
+    SPI.transfer(0);                    // Time between ramp steps
+    if (amplitude < 1024)               // Enable amplitude control with no ramping
+      SPI.transfer((ACR_Bits::MultiplierEnable | amplitude)>>8);
+    else
+      SPI.transfer(0);                  // Disable the amplitude multiplier
     SPI.transfer(amplitude&0xFF);       // Bottom 8 bits of amplitude
     spiEnd();
   }
@@ -290,7 +305,7 @@ public:
     pulse(UpdatePin);
   }
 
-  void sweepFrequency(ChannelNum chan, uint32_t freq, bool follow = true)               // Target frequency
+  void sweepFrequency(ChannelNum chan, uint32_t freq, bool follow = true)       // Target frequency
   {
     sweepDelta(chan, frequencyDelta(freq), follow);
   }
