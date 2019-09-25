@@ -50,6 +50,10 @@ Alternatively, you can reset the chip at any time later:
 
     dds.reset();
 
+The reset() function takes an optional argument to initialise the
+CFR register. Read the code for details, but you might wish to clear
+sweep or phase accumulator on any change, for example.
+
 ## Changing the DDS core frequency
 
 Configure the PLL multiplier or apply a core frequency calibration

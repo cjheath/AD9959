@@ -212,12 +212,28 @@ public:
     reset();
   }
 
-  void reset()
+  /*
+   * Reset, applying CFR bits requested.
+   * You might want to add:
+   * CFR_Bits::AutoclearSweep - clear the sweep accumulator on I/O update or profile change
+   * CFR_Bits::AutoclearPhase - clear the phase accumulator on I/O update or profile change
+   */
+  void reset(
+    CFR_Bits cfr =
+      CFR_Bits::DACFullScale |
+      CFR_Bits::MatchPipeDelay |
+      CFR_Bits::OutputSineWave
+  )
   {
     pulse(ResetPin);                    // (minimum 5 cycles of the 30MHz clock)
     pulse(SPIClkPin);                   // Enable serial loading mode:
     pulse(UpdatePin);
-    last_channels = ChannelAll;         // Ensure it gets set, not optimised out
+
+    // Apply the requested CFR bits
+    last_channels = ChannelNone;        // Ensure channels get set, not optimised out
+    setChannels(ChannelAll);
+    write(CFR, cfr);
+
     setChannels(ChannelNone);           // Disable all channels, set 3-wire MSB mode:
     pulse(UpdatePin);                   // Apply the changes
     setClock();                         // Set the PLL going
@@ -412,7 +428,7 @@ protected:
 
   void spiBegin()
   {
-    SPI.beginTransaction(SPISettings(SPIRate, MSBFIRST, SPI_MODE0));
+    SPI.beginTransaction(SPISettings(SPIRate, MSBFIRST, SPI_MODE3));
     chipEnable();
   }
 
