@@ -445,7 +445,7 @@ protected:
     static constexpr uint8_t register_length[8] = { 1, 3, 2, 3, 4, 2, 3, 2 };  // And 4 beyond that
 
     uint32_t    rval = 0;
-    int         len = reg < sizeof(register_length) ? register_length[reg] : 4;
+    int         len = (reg&0x7F) < sizeof(register_length)/sizeof(uint32_t) ? register_length[reg&0x07] : 4;
     spiBegin();
     SPI.transfer(reg);
     while (len-- > 0)
