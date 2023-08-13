@@ -370,7 +370,7 @@ public:
       CFR_Bits::PhaseModulation |
       CFR_Bits::SweepEnable |
       CFR_Bits::DACFullScale |
-      CFR_Bits::MatchPipeDela |
+      CFR_Bits::MatchPipeDelay |
       (follow ? 0 : CFR_Bits::SweepNoDwell)
     );
 
